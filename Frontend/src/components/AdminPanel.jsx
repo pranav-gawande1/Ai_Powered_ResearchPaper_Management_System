@@ -4,24 +4,24 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { useStats } from '../hooks/useStats.js';
 import AddPaperForm from './AddPaperForm.jsx';
 import AddPaperWithAI from './AddPaperWithAI.jsx';
-import { useNavigate } from "react-router-dom";
+import ViewPaperModal from './ViewPaperModal.jsx'; // ✅ ADD THIS
 
 const AdminPanel = ({ onRoleSwitch }) => {
   const { user, logout, token } = useAuth();
-  const navigate = useNavigate();
   const { stats, loading: statsLoading, refetch: refetchStats } = useStats();
-
 
   const [activeTab, setActiveTab] = useState('overview');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [showAddAIForm, setShowAddAIForm] = useState(false); 
+  const [showAddAIForm, setShowAddAIForm] = useState(false);
+  
+  // ✅ ADD THESE STATES
+  const [selectedPaper, setSelectedPaper] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
-  // NEW STATES
   const [papers, setPapers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // 🔹 Fetch Papers Function
   const fetchPapers = async () => {
     setLoading(true);
     setError(null);
@@ -50,7 +50,6 @@ const AdminPanel = ({ onRoleSwitch }) => {
     }
   };
 
-  // 🔹 Fetch when component mounts
   useEffect(() => {
     fetchPapers();
   }, []);
@@ -73,37 +72,40 @@ const AdminPanel = ({ onRoleSwitch }) => {
     setShowAddForm(false);
   };
 
-  // ✅ MODIFIED: Handle both regular and AI form success
   const handleFormSuccess = (action) => {
     if (action === 'openAI') {
-      // User clicked "Add Paper with AI" button in the form
       setShowAddForm(false);
-      setShowAddAIForm(true); // Open AI modal
+      setShowAddAIForm(true);
     } else {
-      // Regular paper added successfully
       setShowAddForm(false);
       refetchStats();
       fetchPapers();
     }
   };
 
-  // ✅ ADD THIS: Handle AI form close
   const handleAIFormClose = () => {
     setShowAddAIForm(false);
   };
 
-  // ✅ ADD THIS: Handle AI form success
   const handleAIFormSuccess = () => {
     setShowAddAIForm(false);
     refetchStats();
-    fetchPapers(); // refresh papers list after AI adds paper
+    fetchPapers();
   };
 
+  // ✅ ADD THESE FUNCTIONS
+  const handleViewPaper = (paper) => {
+    setSelectedPaper(paper);
+    setShowViewModal(true);
+  };
 
+  const handleCloseViewModal = () => {
+    setShowViewModal(false);
+    setSelectedPaper(null);
+  };
 
   return (
     <div className="dashboard-container">
-      {/* Header */}
       <header className="admin-header">
         <div className="header-content">
           <div className="header-left">
@@ -129,7 +131,6 @@ const AdminPanel = ({ onRoleSwitch }) => {
         </div>
       </header>
 
-      {/* Navigation Tabs */}
       <nav className="admin-nav">
         <div className="nav-content">
           <button
@@ -139,24 +140,22 @@ const AdminPanel = ({ onRoleSwitch }) => {
             Overview
           </button>
           <button
-            onClick={() => navigate("/manage-papers")}
-            className={`nav-tab ${activeTab === "papers" ? "active" : ""}`}
+            onClick={() => setActiveTab('papers')}
+            className={`nav-tab ${activeTab === 'papers' ? 'active' : ''}`}
           >
             Manage Papers
           </button>
           <button
-            onClick={() => navigate('/analytics')}
+            onClick={() => setActiveTab('analytics')}
             className={`nav-tab ${activeTab === 'analytics' ? 'active' : ''}`}
           >
             Analytics
           </button>
         </div>
-      </nav >
+      </nav>
 
-      {/* Main Content */}
-      < main className="admin-main" >
-        {/* Stats Section */}
-        < div className="stats-section" >
+      <main className="admin-main">
+        <div className="stats-section">
           <div className="admin-stats-grid">
             <div className="stat-card blue">
               <div className="stat-icon"><FileText size={24} /></div>
@@ -198,10 +197,9 @@ const AdminPanel = ({ onRoleSwitch }) => {
               </div>
             </div>
           </div>
-        </div >
+        </div>
 
-        {/* Recently Added Papers */}
-        < div className="recent-papers-section" >
+        <div className="recent-papers-section">
           <h2>Recently Added Papers</h2>
 
           {loading && <p>Loading papers...</p>}
@@ -214,29 +212,41 @@ const AdminPanel = ({ onRoleSwitch }) => {
                   <div className="paper-category">{paper.category}</div>
                   <h3 className="paper-title">{paper.title}</h3>
                   <div className="paper-date">{paper.date}</div>
+                  {/* ✅ ADD THIS BUTTON */}
+                  <button
+                    onClick={() => handleViewPaper(paper)}
+                    className="mt-3 px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View Details
+                  </button>
                 </div>
               ))
             ) : (
               <p>No papers found</p>
             )}
           </div>
-        </div >
-      </main >
+        </div>
+      </main>
 
-      {/* ✅ Regular Add Paper Form */}
-      < AddPaperForm
+      <AddPaperForm
         isOpen={showAddForm}
         onClose={handleFormClose}
         onSuccess={handleFormSuccess}
       />
 
-      {/* ✅ ADD THIS: AI Add Paper Form */}
-      < AddPaperWithAI
+      <AddPaperWithAI
         isOpen={showAddAIForm}
         onClose={handleAIFormClose}
         onSuccess={handleAIFormSuccess}
       />
-    </div >
+
+      {/* ✅ ADD THIS */}
+      <ViewPaperModal
+        isOpen={showViewModal}
+        onClose={handleCloseViewModal}
+        paper={selectedPaper}
+      />
+    </div>
   );
 };
 

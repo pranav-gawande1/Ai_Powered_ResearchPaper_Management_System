@@ -5,6 +5,7 @@ import { BookOpen, Eye, Globe, LogOut } from "lucide-react"
 import { useStats, useDomains, useCategories } from "../hooks/useStats.js"
 import { useAuth } from "../context/AuthContext.jsx"
 import PaperCard from "./PaperCard.jsx"
+import ViewPaperModal from './ViewPaperModal.jsx'
 
 const Dashboard = ({ onRoleSwitch }) => {
   const { user, logout, token } = useAuth()
@@ -14,12 +15,25 @@ const Dashboard = ({ onRoleSwitch }) => {
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterDomain, setFilterDomain] = useState("All")
+  const [selectedPaper, setSelectedPaper] = useState(null)
+  const [showViewModal, setShowViewModal] = useState(false)
 
   const { stats, loading: statsLoading } = useStats()
   const { domains } = useDomains()
   const { categories } = useCategories()
 
-  //fetch papers directly (same as AdminPanel)
+  // ✅ CORRECT: View paper handler - opens modal with paper data
+  const handleViewPaper = (paper) => {
+    setSelectedPaper(paper)
+    setShowViewModal(true)
+  }
+
+  const handleCloseViewModal = () => {
+    setShowViewModal(false)
+    setSelectedPaper(null)
+  }
+
+  // Fetch papers directly (same as AdminPanel)
   const fetchPapers = async () => {
     setLoading(true)
     setError(null)
@@ -35,8 +49,6 @@ const Dashboard = ({ onRoleSwitch }) => {
       if (response.ok) {
         const result = await response.json()
         console.log("Fetched papers:", result)
-
-        // ensure it's always an array
         setPapers(Array.isArray(result) ? result : result.papers || [])
       } else {
         const errorData = await response.json()
@@ -54,10 +66,6 @@ const Dashboard = ({ onRoleSwitch }) => {
   useEffect(() => {
     fetchPapers()
   }, [])
-
-  const handleViewPaper = (paperId) => {
-    console.log("View count increment not yet wired:", paperId)
-  }
 
   const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
@@ -126,21 +134,21 @@ const Dashboard = ({ onRoleSwitch }) => {
             className="w-full px-4 py-3 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
 
-
-            <div className="flex flex-wrap gap-2">
-              {["All", ...(domains || [])].map((domain) => (
-                <button
-                  key={domain}
-                  onClick={() => setFilterDomain(domain)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-all ${filterDomain === domain
-                      ? "bg-slate-600 text-white" 
-                      : "bg-white-700 dark:bg-slate-200 text-black hover:bg-slate-600"
-                    }`}
-                >
-                  {domain}
-                </button>
-              ))}
-            </div>
+          <div className="flex flex-wrap gap-2">
+            {["All", ...(domains || [])].map((domain) => (
+              <button
+                key={domain}
+                onClick={() => setFilterDomain(domain)}
+                className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                  filterDomain === domain
+                    ? "bg-slate-600 text-white"
+                    : "bg-white-700 dark:bg-slate-200 text-black hover:bg-slate-600"
+                }`}
+              >
+                {domain}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Stats Section */}
@@ -192,7 +200,7 @@ const Dashboard = ({ onRoleSwitch }) => {
                 <PaperCard
                   key={paper.id}
                   paper={paper}
-                  onView={() => handleViewPaper(paper.id)}
+                  onView={() => handleViewPaper(paper)} // ✅ FIXED: Pass full paper object
                   onDownload={() => handleDownloadPaper(paper.pdfUrl, paper.title)}
                 />
               ))}
@@ -200,7 +208,15 @@ const Dashboard = ({ onRoleSwitch }) => {
           )}
         </div>
       </main>
+
+      {/* ✅ ADDED: View Paper Modal */}
+      <ViewPaperModal
+        isOpen={showViewModal}
+        onClose={handleCloseViewModal}
+        paper={selectedPaper}
+      />
     </div>
   )
 }
+
 export default Dashboard
